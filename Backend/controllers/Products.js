@@ -1,31 +1,23 @@
-const Product = require('../models').Product;
-
+const Product = require('../models/product');
 
 const showAllProducts = async (req, res) => {
   try {
-    const products = await Product.findAll();
-    const parsedProducts = products.map((product) => {
-      const prod = product.toJSON();
-      return {
-        ...prod,
-        images: JSON.parse(prod.images || '[]'),
-      };
-    });
+    const products = await Product.find();
 
+    // No more JSON.parse needed — images/sizes/colors are already real arrays in MongoDB
     res.status(200).json({
       status: 'Success',
-      data: parsedProducts,
+      data: products,
     });
   } catch (err) {
     res.status(500).json({ error: 'Server error', message: err.message });
   }
 };
 
-
 const showSingleProduct = async (req, res) => {
   try {
     const { name, category } = req.body;
-    const product = await Product.findOne({ where: { name, category } });
+    const product = await Product.findOne({ name, category });
 
     if (product) {
       res.status(200).json({ status: 'Success', data: product });
@@ -36,14 +28,12 @@ const showSingleProduct = async (req, res) => {
     res.status(500).json({ error: 'Server error', message: err.message });
   }
 };
-
-
 
 const showSingleProductBYID = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const product = await Product.findByPk(id); 
+    const product = await Product.findById(id);
 
     if (product) {
       res.status(200).json({ status: 'Success', data: product });
@@ -54,7 +44,6 @@ const showSingleProductBYID = async (req, res) => {
     res.status(500).json({ error: 'Server error', message: err.message });
   }
 };
-
 
 const showAllProductsByCategory = async (req, res) => {
   try {
@@ -64,10 +53,7 @@ const showAllProductsByCategory = async (req, res) => {
       return res.status(400).json({ status: 'Fail', error: 'Category parameter is required' });
     }
 
-    // Fetch all products with matching category
-    const products = await Product.findAll({
-      where: { category }
-    });
+    const products = await Product.find({ category });
 
     if (products.length > 0) {
       res.status(200).json({ status: 'Success', data: products });
@@ -79,12 +65,12 @@ const showAllProductsByCategory = async (req, res) => {
   }
 };
 
-
-
 const createProduct = async (req, res) => {
   try {
     const { name, description, price, category, stock, isFeatured, sizes, colors, images } = req.body;
 
+    // sizes/colors/images are stored as real arrays now — no JSON.stringify needed.
+    // If the frontend sends them as actual arrays (e.g. ["S","M","L"]), this works as-is.
     const newProduct = await Product.create({
       name,
       description,
@@ -92,17 +78,17 @@ const createProduct = async (req, res) => {
       category,
       stock,
       isFeatured,
-      sizes: JSON.stringify(sizes),
-      colors: JSON.stringify(colors),
-      images: JSON.stringify(images),
+      sizes,
+      colors,
+      images,
     });
 
     res.status(201).json({
       status: 'Success',
       message: 'Product created successfully',
       data: {
-        productId: newProduct.id,
-        ...newProduct.toJSON()
+        productId: newProduct._id,
+        ...newProduct.toObject()
       }
     });
   } catch (err) {
@@ -113,39 +99,34 @@ const createProduct = async (req, res) => {
   }
 };
 
-
 const deleteProduct = async (req, res) => {
   try {
     const { id } = req.params;
-    const product = await Product.findByPk(id);
+    const product = await Product.findById(id);
     if (!product) {
       return res.status(404).json({ error: 'Product not found' });
     }
 
-    await product.destroy();
+    await product.deleteOne();
     res.status(200).json({ status: 'Success', message: 'Product deleted' });
   } catch (err) {
     res.status(500).json({ error: 'Failed to delete product', message: err.message });
   }
 };
 
-
 const updateProduct = async (req, res) => {
   try {
     const productId = req.params.id;
     const updates = req.body;
 
-    const product = await Product.findByPk(productId);
+    const product = await Product.findById(productId);
     if (!product) {
       return res.status(404).json({ message: 'Product not found' });
     }
 
-
-    if (updates.sizes) updates.sizes = JSON.stringify(updates.sizes);
-    if (updates.colors) updates.colors = JSON.stringify(updates.colors);
-    if (updates.images) updates.images = JSON.stringify(updates.images);
-
-    await product.update(updates);
+    // sizes/colors/images are real arrays now — no stringify step needed
+    Object.assign(product, updates);
+    await product.save();
 
     res.status(200).json({ message: 'Product updated successfully', data: product });
   } catch (error) {

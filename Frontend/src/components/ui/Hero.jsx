@@ -4,7 +4,7 @@ export default function Hero() {
   const [currentImage, setCurrentImage] = useState(0);
   const [currentVideo, setCurrentVideo] = useState(0);
 
-  const images = ["/image.webp", "/image1.webp", "/image2.webp"];
+  const images = ["/three_loom_cover.webp", "/image1.webp", "/image2.webp"];
 
   const collections = [
     {

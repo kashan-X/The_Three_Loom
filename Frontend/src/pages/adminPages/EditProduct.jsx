@@ -16,13 +16,8 @@ const EditProduct = () => {
       const res = await fetch(`http://localhost:8000/product/single_Product/${id}`);
       const data = await res.json();
       if (data.data) {
-        const parsed = {
-          ...data.data,
-          sizes: JSON.parse(data.data.sizes || '[]'),
-          colors: JSON.parse(data.data.colors || '[]'),
-          images: JSON.parse(data.data.images || '[]'),
-        };
-        setProduct(parsed);
+        // sizes/colors/images are already real arrays from MongoDB now — no JSON.parse needed
+        setProduct(data.data);
       }
     } catch (err) {
       console.error('Failed to load product:', err);

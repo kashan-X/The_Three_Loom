@@ -1,13 +1,13 @@
 require('dotenv').config();
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
-const User = require('../models').User;
+const User = require('../models/user'); // require the model file directly now
 
 const ADMIN_REGISTRATION_CODE = process.env.ADMIN_REGISTRATION_CODE;
 const JWT_SECRET = process.env.JWT_SECRET;
 
 const registerUser = async (req, res) => {
-  const { userId, name, email, password, cnic, role, adminCode } = req.body;
+  const { name, email, password, cnic, role, adminCode } = req.body;
 
   // Only allow admin registration with correct admin code
   if (role !== 'admin' || adminCode !== ADMIN_REGISTRATION_CODE) {
@@ -15,7 +15,7 @@ const registerUser = async (req, res) => {
   }
 
   try {
-    const existing = await User.findOne({ where: { email } });
+    const existing = await User.findOne({ email });
     if (existing) {
       return res.status(400).json({ message: 'Email already exists' });
     }
@@ -23,7 +23,6 @@ const registerUser = async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     const user = await User.create({
-      userId,
       name,
       email,
       password: hashedPassword,
@@ -33,7 +32,7 @@ const registerUser = async (req, res) => {
 
     res.status(201).json({
       message: 'Admin registered successfully',
-      userId: user.id,
+      userId: user._id,
       name: user.name,
       email: user.email,
       cnic: user.cnic
@@ -50,7 +49,7 @@ const loginUser = async (req, res) => {
   const { email, password } = req.body;
 
   try {
-    const user = await User.findOne({ where: { email } });
+    const user = await User.findOne({ email });
     if (!user) {
       return res.status(400).json({ message: 'User not found' });
     }
@@ -65,7 +64,7 @@ const loginUser = async (req, res) => {
     }
 
     const token = jwt.sign(
-      { userId: user.id, email: user.email, role: user.role },
+      { userId: user._id, email: user.email, role: user.role },
       JWT_SECRET,
       { expiresIn: '1h' }
     );
@@ -73,7 +72,7 @@ const loginUser = async (req, res) => {
     res.status(200).json({
       message: 'Login successful',
       user: {
-        userId: user.id,
+        userId: user._id,
         name: user.name,
         email: user.email,
         token: token

@@ -1,5 +1,6 @@
 // controllers/orderController.js
-const { Order, Product } = require('../models');
+const Order = require('../models/order');
+const Product = require('../models/product');
 
 exports.createOrder = async (req, res) => {
   try {
@@ -20,23 +21,23 @@ exports.createOrder = async (req, res) => {
     } = req.body;
 
     /* ---------- basic validation ---------- */
-   if (
-  !email || !fullName || !phoneNumber || !address || !city ||
-  !productId || !quantity || !totalPrice
-) {
-  console.log('Bad Request Payload:', req.body);
-  return res.status(400).json({ error: 'Missing required fields' });
-}
+    if (
+      !email || !fullName || !phoneNumber || !address || !city ||
+      !productId || !quantity || !totalPrice
+    ) {
+      console.log('Bad Request Payload:', req.body);
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
 
     /* ---------- make sure product exists ---------- */
-    const product = await Product.findByPk(productId);
+    const product = await Product.findById(productId);
     if (!product) {
       return res.status(404).json({ error: 'Product not found' });
     }
 
     /* ---------- create order ---------- */
     const order = await Order.create({
-      customerEmail : email,
+      customerEmail: email,
       fullName,
       phoneNumber,
       address,
@@ -60,34 +61,18 @@ exports.createOrder = async (req, res) => {
   }
 };
 
-
 exports.getAllOrders = async (req, res) => {
   try {
-    const orders = await Order.findAll({
-      attributes: [
-        'id', // ✅ Add this line
-        'fullName',
-        'productId',
-        'totalPrice',
-        'quantity',
-        'phoneNumber',
-        'whatsappNumber',
-        'billingAddress',
-        'city',
-        'customerEmail'
-      ],
-      include: {
-        model: Product,
-        as: 'product',
-        attributes: ['name']
-      },
-      order: [['createdAt', 'DESC']]
-    });
+    // .populate('productId', 'name') is the Mongoose equivalent of Sequelize's `include`.
+    // It replaces the productId (ObjectId) with the actual Product document (just the name field here).
+    const orders = await Order.find()
+      .populate('productId', 'name')
+      .sort({ createdAt: -1 }); // -1 = DESC, same as your old order: [['createdAt','DESC']]
 
     const formattedOrders = orders.map(order => ({
-      id:             order.id, // ✅ Include this field in response
+      id:             order._id,
       fullName:       order.fullName,
-      product:        order.product?.name || 'Unknown',
+      product:        order.productId?.name || 'Unknown',
       totalPrice:     order.totalPrice,
       quantity:       order.quantity,
       phoneNumber:    order.phoneNumber,
@@ -104,20 +89,18 @@ exports.getAllOrders = async (req, res) => {
   }
 };
 
-
-
 // DELETE /order/:id – Delete a specific order by ID
 exports.deleteOrder = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const order = await Order.findByPk(id);
+    const order = await Order.findById(id);
 
     if (!order) {
       return res.status(404).json({ error: 'Order not found' });
     }
 
-    await order.destroy();
+    await order.deleteOne();
 
     return res.status(200).json({ message: 'Order deleted successfully' });
   } catch (error) {
@@ -126,13 +109,11 @@ exports.deleteOrder = async (req, res) => {
   }
 };
 
-
-
 exports.updateOrder = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const order = await Order.findByPk(id);
+    const order = await Order.findById(id);
     if (!order) {
       return res.status(404).json({ error: 'Order not found' });
     }
@@ -152,7 +133,7 @@ exports.updateOrder = async (req, res) => {
     } = req.body;
 
     // Only update allowed fields
-    await order.update({
+    Object.assign(order, {
       fullName,
       phoneNumber,
       address,
@@ -165,6 +146,8 @@ exports.updateOrder = async (req, res) => {
       totalPrice
     });
 
+    await order.save();
+
     return res.status(200).json({
       message: 'Order updated successfully',
       order
@@ -175,13 +158,9 @@ exports.updateOrder = async (req, res) => {
   }
 };
 
-
-
 exports.getCustomerSummary = async (req, res) => {
   try {
-    const orders = await Order.findAll({
-      attributes: ['customerEmail', 'fullName' , 'phoneNumber'],
-    });
+    const orders = await Order.find({}, 'customerEmail fullName phoneNumber');
 
     const summaryMap = {};
 
@@ -198,7 +177,7 @@ exports.getCustomerSummary = async (req, res) => {
     });
 
     const summaryList = Object.entries(summaryMap).map(([email, data]) => {
-      const { name ,phone, count } = data;
+      const { name, phone, count } = data;
       let category = '';
 
       if (count > 50) category = 'Super List';

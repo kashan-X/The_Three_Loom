@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 const generateSKU = (product) => {
-  const base = product?.id || product?.name || 'SKU';
+  const base = product?._id || product?.name || 'SKU';
   const hash = Array.from(base).reduce((acc, char) => acc + char.charCodeAt(0), 0);
   return `SKU-${hash}`;
 };
@@ -10,9 +10,10 @@ const generateSKU = (product) => {
 export default function ProductDetailContent({ product }) {
   const navigate = useNavigate();
 
-  const sizes = JSON.parse(product.sizes || '[]');
-  const colors = JSON.parse(product.colors || '[]');
-  const images = JSON.parse(product.images || '[]');
+  // sizes/colors/images are already real arrays from MongoDB now — no JSON.parse needed
+  const sizes = product.sizes || [];
+  const colors = product.colors || [];
+  const images = product.images || [];
 
   const [selectedImage, setSelectedImage] = useState(images[0]);
   const [selectedSize, setSelectedSize] = useState('');
@@ -23,6 +24,7 @@ export default function ProductDetailContent({ product }) {
   const handleAddToCart = () => {
     navigate('/customer-info', {
       state: {
+        id: product._id,          // <-- needed so the order form knows which product was bought
         name: product.name,
         price: product.price,
         category: product.category,
@@ -161,4 +163,3 @@ export default function ProductDetailContent({ product }) {
     </main>
   );
 }
-

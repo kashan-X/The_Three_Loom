@@ -1,15 +1,20 @@
 // app.js
-//require('dotenv').config();             // if you keep DB/PW/PORT in .env
+require('dotenv').config();              // load .env (MONGO_URI, JWT_SECRET, etc.)
 
 const express = require('express');
 const cors = require('cors');
+const connectDB = require('./config/db');
 
 const authRoute = require('./routes/authRoute');
 const productRoute = require('./routes/productRoute');
 const orderRoutes = require('./routes/orderRoutes');
 const adminRoutes = require('./routes/adminRoutes');
+
 const app = express();
 const PORT = process.env.PORT || 8000;
+
+/* ---------- connect to MongoDB ---------- */
+connectDB();
 
 /* ---------- global middleware ---------- */
 app.use(cors());                         // allow cross-origin requests
@@ -21,7 +26,6 @@ app.use('/images', express.static('public/images'));
 app.use('/auth', authRoute);
 app.use('/product', productRoute);
 app.use('/order', orderRoutes);
-
 
 /* Admin */
 app.use('/admin', adminRoutes);

@@ -1,39 +1,18 @@
-'use strict';
-const { Model } = require('sequelize');
+const mongoose = require('mongoose');
 
-module.exports = (sequelize, DataTypes) => {
-  class Product extends Model {
-    /**
-     * Define associations
-     */
-    static associate(models) {
-      // 🔗  A product can appear in many orders
-      Product.hasMany(models.Order, {
-        foreignKey: 'productId',
-        as: 'orders'
-      });
-    }
-  }
+const productSchema = new mongoose.Schema(
+  {
+    name: { type: String, required: true },
+    description: { type: String },
+    price: { type: Number, required: true },
+    category: { type: String, required: true },
+    sizes: { type: [String], default: [] },
+    colors: { type: [String], default: [] },
+    images: { type: [String], default: [] },
+    stock: { type: Number, default: 0 },
+    isFeatured: { type: Boolean, default: false }
+  },
+  { timestamps: true }
+);
 
-  Product.init(
-    {
-      name:        DataTypes.STRING,
-      description: DataTypes.STRING,
-      price:       DataTypes.DECIMAL,
-      category:    DataTypes.STRING,
-      sizes:       DataTypes.STRING,
-      colors:      DataTypes.STRING,
-      images:      DataTypes.STRING,
-      stock:       DataTypes.INTEGER,
-      isFeatured:  DataTypes.BOOLEAN
-    },
-    {
-      sequelize,
-      modelName: 'Product',
-      tableName: 'Products',
-      timestamps: true
-    }
-  );
-
-  return Product;
-};
+module.exports = mongoose.model('Product', productSchema);

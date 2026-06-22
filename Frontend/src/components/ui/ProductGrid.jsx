@@ -13,9 +13,9 @@ export default function ProductGrid({ products, searchTerm }) {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         {filtered.map(product => (
-          <Link                    
-            to={`/product/${product.id}`}
-            key={product.id}
+          <Link
+            to={`/product/${product._id}`}
+            key={product._id}
             className="block no-underline text-black"
           >
             <div className="group border border-gray-300 overflow-hidden shadow-sm transition hover:border-[#FFC0CB]">

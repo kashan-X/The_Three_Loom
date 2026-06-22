@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ProductModal from './ProductModal';
@@ -95,7 +94,7 @@ const ProductTable = () => {
         <tbody>
           {paginated.length > 0 ? (
             paginated.map((product) => (
-              <tr key={product.id}>
+              <tr key={product._id}>
                 <td>
                   <img
                     src={product.images?.[0] || 'https://via.placeholder.com/50'}
@@ -115,13 +114,13 @@ const ProductTable = () => {
                 <td>
                   <button
                     className="btn btn-edit"
-                    onClick={() => navigate(`/admin/products/edit/${product.id}`)}
+                    onClick={() => navigate(`/admin/products/edit/${product._id}`)}
                   >
                     Edit
                   </button>
                   <button
                     className="btn btn-delete"
-                    onClick={() => handleDelete(product.id)}
+                    onClick={() => handleDelete(product._id)}
                   >
                     Delete
                   </button>
@@ -143,7 +142,6 @@ const ProductTable = () => {
       </table>
 
       {/* Pagination */}
-      {/* Pagination with Square Buttons and Arrows */}
       <div className="pagination-container" style={{ marginTop: '2rem', display: 'flex', justifyContent: 'center' }}>
         <ul className="pagination-list" style={{ display: 'flex', gap: '6px', listStyle: 'none', padding: 0 }}>
 

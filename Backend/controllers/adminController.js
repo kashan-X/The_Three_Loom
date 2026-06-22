@@ -1,54 +1,63 @@
 // controllers/adminController.js
-const { Product, Order, sequelize } = require('../models');
-const { Op } = require('sequelize');
-const { fn, col } = require('sequelize');
+const Product = require('../models/product');
+const Order = require('../models/order');
 
 exports.getDashboardStats = async (req, res) => {
   try {
-    const totalProducts = await Product.count();
-    const totalOrders = await Order.count();
+    const totalProducts = await Product.countDocuments();
+    const totalOrders = await Order.countDocuments();
 
-    const totalUsersResult = await Order.aggregate('customerEmail', 'DISTINCT', { plain: false });
-    const totalUsers = totalUsersResult.length;
+    // distinct customer emails -> count of unique customers
+    const distinctEmails = await Order.distinct('customerEmail');
+    const totalUsers = distinctEmails.length;
 
-    const totalSalesResult = await Order.sum('totalPrice');
-    const totalSales = Number(totalSalesResult) || 0;
+    // sum of totalPrice across all orders
+    const totalSalesAgg = await Order.aggregate([
+      { $group: { _id: null, total: { $sum: '$totalPrice' } } }
+    ]);
+    const totalSales = totalSalesAgg[0]?.total || 0;
 
     const categories = ['Men', 'Women', 'Children'];
     const categoryCounts = {};
 
     for (const cat of categories) {
-      categoryCounts[cat] = await Product.count({ where: { category: cat } });
+      categoryCounts[cat] = await Product.countDocuments({ category: cat });
     }
 
-    // 🧮 Monthly sales (for chartData)
-    const monthlySalesRaw = await Order.findAll({
-      attributes: [
-        [sequelize.fn('MONTH', sequelize.col('createdAt')), 'month'],
-        [sequelize.fn('SUM', sequelize.col('totalPrice')), 'total']
-      ],
-      group: [sequelize.fn('MONTH', sequelize.col('createdAt'))],
-      order: [[sequelize.fn('MONTH', sequelize.col('createdAt')), 'ASC']]
-    });
+    /* ---------- Monthly sales (for chartData) ---------- */
+    // $month extracts the month number (1-12) directly from the createdAt date field.
+    const monthlySalesRaw = await Order.aggregate([
+      {
+        $group: {
+          _id: { $month: '$createdAt' },
+          total: { $sum: '$totalPrice' }
+        }
+      },
+      { $sort: { _id: 1 } }
+    ]);
 
     const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     const monthlySales = monthNames.map((name, index) => {
-      const record = monthlySalesRaw.find(row => Number(row.dataValues.month) === index + 1);
+      const record = monthlySalesRaw.find(row => row._id === index + 1);
       return {
         name,
-        value: record ? Number(record.dataValues.total) : 0
+        value: record ? record.total : 0
       };
     });
 
-    // 🧮 Sales by country (radarData)
-    const countrySalesRaw = await Order.findAll({
-      attributes: ['city', [fn('SUM', col('totalPrice')), 'total']],
-      group: ['city']
-    });
+    /* ---------- Sales by city (radarData) ---------- */
+    const citySalesRaw = await Order.aggregate([
+      {
+        $group: {
+          _id: '$city',
+          total: { $sum: '$totalPrice' }
+        }
+      }
+    ]);
 
-    const countrySales = countrySalesRaw.map(row => ({
-      country: row.city || 'Unknown',
-      year2025: Number(row.dataValues.total)
+    const countrySales = citySalesRaw.map(row => ({
+      country: row._id || 'Unknown',
+      year2025: row.total
     }));
 
     res.status(200).json({
