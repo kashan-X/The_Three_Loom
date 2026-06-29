@@ -1,5 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import FormField from './FormField';
+
+const SEASONS = ['Summer', 'Winter', 'Spring', 'Autumn'];
+
 const ProductForm = ({ onSubmit, initialData = null }) => {
   const [categories, setCategories] = useState([]);
   const [form, setForm] = useState({
@@ -7,6 +10,7 @@ const ProductForm = ({ onSubmit, initialData = null }) => {
     description: '',
     price: '',
     category: '',
+    subCategory: 'Summer',
     stock: '',
     isFeatured: false,
     sizes: [''],
@@ -22,6 +26,7 @@ const ProductForm = ({ onSubmit, initialData = null }) => {
     if (initialData) {
       setForm({
         ...initialData,
+        subCategory: initialData.subCategory || 'Summer',
         sizes: initialData.sizes.length ? initialData.sizes : [''],
         colors: initialData.colors.length ? initialData.colors : [''],
         images: initialData.images.length ? initialData.images : [''],
@@ -101,6 +106,20 @@ const ProductForm = ({ onSubmit, initialData = null }) => {
         </select>
       </FormField>
 
+      <FormField label="Season">
+        <select
+          name="subCategory"
+          value={form.subCategory}
+          onChange={handleChange}
+          className="w-full p-3 border border-pink-300 rounded"
+          required
+        >
+          {SEASONS.map((season) => (
+            <option key={season} value={season}>{season}</option>
+          ))}
+        </select>
+      </FormField>
+
       <FormField>
         <input
           name="stock"
@@ -135,7 +154,7 @@ const ProductForm = ({ onSubmit, initialData = null }) => {
               onChange={(e) => handleArrayChange(field, i, e.target.value)}
               placeholder={`${field.slice(0, -1)} ${i + 1}`}
               className="w-full p-3 mb-2 border border-pink-300 rounded"
-              required={field !== 'colors'} 
+              required={field !== 'colors'}
             />
           ))}
           <button type="button" onClick={() => addField(field)} className="text-sm text-black-600 hover:underline">
@@ -148,7 +167,6 @@ const ProductForm = ({ onSubmit, initialData = null }) => {
         type="submit"
         className="w-full py-4 bg-pink-400 hover:bg-pink-500 text-white font-semibold rounded"
         style={{ backgroundColor: "#FFC0CB" }}
-
       >
         Create Product
       </button>

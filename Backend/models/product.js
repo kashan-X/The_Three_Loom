@@ -6,9 +6,14 @@ const productSchema = new mongoose.Schema(
     description: { type: String },
     price: { type: Number, required: true },
     category: { type: String, required: true },
-    sizes: { type: [String], default: [] },
-    colors: { type: [String], default: [] },
-    images: { type: [String], default: [] },
+    subCategory: {
+      type: String,
+      enum: ['Summer', 'Winter', 'Spring', 'Autumn'],
+      default: 'Summer'
+    },
+    sizes: { type: [String], default: [] },   // real array now, no more JSON.stringify
+    colors: { type: [String], default: [] },  // real array now
+    images: { type: [String], default: [] },  // real array now
     stock: { type: Number, default: 0 },
     isFeatured: { type: Boolean, default: false }
   },

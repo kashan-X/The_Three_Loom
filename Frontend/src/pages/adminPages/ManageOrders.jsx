@@ -1,35 +1,22 @@
 import React, { useEffect, useState } from 'react';
-import AdminNavbar from '../../components/ui/Admin/AdminNavbar';
 import Sidebar from '../../components/ui/Admin/Sidebar';
 import OrderTable from '../../components/ui/Admin/OrderTable';
-import '../../styles/admin.css';
 
 const ManageOrders = () => {
   const [orders, setOrders] = useState([]);
 
-  useEffect(() => {
-    fetchOrders();
-  }, []);
+  useEffect(() => { fetchOrders(); }, []);
 
   const fetchOrders = async () => {
     const token = localStorage.getItem('adminToken');
     try {
       const res = await fetch('http://localhost:8000/order/all', {
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       });
-
-      if (res.status === 401) {
-        console.warn('Unauthorized - invalid or missing token');
-      }
-
+      if (res.status === 401) { console.warn('Unauthorized'); return; }
       const data = await res.json();
       setOrders(data.orders || []);
-    } catch (err) {
-      console.error('Failed to fetch orders', err);
-    }
+    } catch (err) { console.error('Failed to fetch orders', err); }
   };
 
   const handleDelete = async (id) => {
@@ -37,26 +24,30 @@ const ManageOrders = () => {
     try {
       await fetch(`http://localhost:8000/order/${id}`, {
         method: 'DELETE',
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('adminToken')}`,
-        },
+        headers: { Authorization: `Bearer ${localStorage.getItem('adminToken')}` },
       });
-      fetchOrders(); // Refresh list
-    } catch (error) {
-      console.error('Failed to delete order:', error);
-    }
+      fetchOrders();
+    } catch (error) { console.error('Failed to delete order:', error); }
+  };
+
+  const handleStatusChange = async (id, newStatus) => {
+    try {
+      const res = await fetch(`http://localhost:8000/order/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('adminToken')}` },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      if (!res.ok) { const data = await res.json(); alert(data.error || 'Failed to update status'); return; }
+      setOrders((prev) => prev.map((order) => order.id === id ? { ...order, status: newStatus } : order));
+    } catch (error) { console.error('Failed to update order status:', error); alert('Server error updating status'); }
   };
 
   return (
-    <div className="admin-container">
+    <div className="flex min-h-screen bg-[#f7f8fc]">
       <Sidebar />
-      <div className="admin-main">
-        
-        <main className="dashboard-main">
-        
-          <OrderTable orders={orders} onDelete={handleDelete} />
-        </main>
-      </div>
+      <main className="flex-1 p-8 min-w-0">
+        <OrderTable orders={orders} onDelete={handleDelete} onStatusChange={handleStatusChange} />
+      </main>
     </div>
   );
 };

@@ -1,13 +1,38 @@
+// controllers/Products.js
 const Product = require('../models/product');
+const CategoryDiscount = require('../models/categoryDiscount');
+
+// Helper: build a map of { category -> discountPercent } for all active discounts
+const getActiveDiscountMap = async () => {
+  const discounts = await CategoryDiscount.find({ active: true });
+  const map = {};
+  discounts.forEach(d => { map[d.category] = d.discountPercent; });
+  return map;
+};
+
+// Helper: attach discountedPrice to a product plain object
+const applyDiscount = (product, discountMap) => {
+  const obj = product.toObject ? product.toObject() : { ...product };
+  const pct = discountMap[obj.category];
+  if (pct && pct > 0) {
+    obj.discountPercent = pct;
+    obj.discountedPrice = Math.round(obj.price * (1 - pct / 100));
+  } else {
+    obj.discountPercent = 0;
+    obj.discountedPrice = obj.price;
+  }
+  return obj;
+};
 
 const showAllProducts = async (req, res) => {
   try {
-    const products = await Product.find();
-
-    // No more JSON.parse needed — images/sizes/colors are already real arrays in MongoDB
+    const [products, discountMap] = await Promise.all([
+      Product.find(),
+      getActiveDiscountMap()
+    ]);
     res.status(200).json({
       status: 'Success',
-      data: products,
+      data: products.map(p => applyDiscount(p, discountMap))
     });
   } catch (err) {
     res.status(500).json({ error: 'Server error', message: err.message });
@@ -17,10 +42,12 @@ const showAllProducts = async (req, res) => {
 const showSingleProduct = async (req, res) => {
   try {
     const { name, category } = req.body;
-    const product = await Product.findOne({ name, category });
-
+    const [product, discountMap] = await Promise.all([
+      Product.findOne({ name, category }),
+      getActiveDiscountMap()
+    ]);
     if (product) {
-      res.status(200).json({ status: 'Success', data: product });
+      res.status(200).json({ status: 'Success', data: applyDiscount(product, discountMap) });
     } else {
       res.status(404).json({ error: 'Product not found' });
     }
@@ -32,11 +59,12 @@ const showSingleProduct = async (req, res) => {
 const showSingleProductBYID = async (req, res) => {
   try {
     const { id } = req.params;
-
-    const product = await Product.findById(id);
-
+    const [product, discountMap] = await Promise.all([
+      Product.findById(id),
+      getActiveDiscountMap()
+    ]);
     if (product) {
-      res.status(200).json({ status: 'Success', data: product });
+      res.status(200).json({ status: 'Success', data: applyDiscount(product, discountMap) });
     } else {
       res.status(404).json({ error: 'Product not found' });
     }
@@ -48,15 +76,22 @@ const showSingleProductBYID = async (req, res) => {
 const showAllProductsByCategory = async (req, res) => {
   try {
     const category = req.params.category;
+    const { subCategory } = req.query;
 
     if (!category) {
       return res.status(400).json({ status: 'Fail', error: 'Category parameter is required' });
     }
 
-    const products = await Product.find({ category });
+    const filter = { category };
+    if (subCategory) filter.subCategory = subCategory;
+
+    const [products, discountMap] = await Promise.all([
+      Product.find(filter),
+      getActiveDiscountMap()
+    ]);
 
     if (products.length > 0) {
-      res.status(200).json({ status: 'Success', data: products });
+      res.status(200).json({ status: 'Success', data: products.map(p => applyDiscount(p, discountMap)) });
     } else {
       res.status(404).json({ status: 'Fail', error: 'No products found in this category' });
     }
@@ -67,35 +102,15 @@ const showAllProductsByCategory = async (req, res) => {
 
 const createProduct = async (req, res) => {
   try {
-    const { name, description, price, category, stock, isFeatured, sizes, colors, images } = req.body;
-
-    // sizes/colors/images are stored as real arrays now — no JSON.stringify needed.
-    // If the frontend sends them as actual arrays (e.g. ["S","M","L"]), this works as-is.
-    const newProduct = await Product.create({
-      name,
-      description,
-      price,
-      category,
-      stock,
-      isFeatured,
-      sizes,
-      colors,
-      images,
-    });
-
+    const { name, description, price, category, subCategory, stock, isFeatured, sizes, colors, images } = req.body;
+    const newProduct = await Product.create({ name, description, price, category, subCategory, stock, isFeatured, sizes, colors, images });
     res.status(201).json({
       status: 'Success',
       message: 'Product created successfully',
-      data: {
-        productId: newProduct._id,
-        ...newProduct.toObject()
-      }
+      data: { productId: newProduct._id, ...newProduct.toObject() }
     });
   } catch (err) {
-    res.status(500).json({
-      error: 'Failed to create product',
-      message: err.message,
-    });
+    res.status(500).json({ error: 'Failed to create product', message: err.message });
   }
 };
 
@@ -103,10 +118,7 @@ const deleteProduct = async (req, res) => {
   try {
     const { id } = req.params;
     const product = await Product.findById(id);
-    if (!product) {
-      return res.status(404).json({ error: 'Product not found' });
-    }
-
+    if (!product) return res.status(404).json({ error: 'Product not found' });
     await product.deleteOne();
     res.status(200).json({ status: 'Success', message: 'Product deleted' });
   } catch (err) {
@@ -116,18 +128,10 @@ const deleteProduct = async (req, res) => {
 
 const updateProduct = async (req, res) => {
   try {
-    const productId = req.params.id;
-    const updates = req.body;
-
-    const product = await Product.findById(productId);
-    if (!product) {
-      return res.status(404).json({ message: 'Product not found' });
-    }
-
-    // sizes/colors/images are real arrays now — no stringify step needed
-    Object.assign(product, updates);
+    const product = await Product.findById(req.params.id);
+    if (!product) return res.status(404).json({ message: 'Product not found' });
+    Object.assign(product, req.body);
     await product.save();
-
     res.status(200).json({ message: 'Product updated successfully', data: product });
   } catch (error) {
     res.status(500).json({ error: 'Error updating product', message: error.message });
@@ -135,11 +139,6 @@ const updateProduct = async (req, res) => {
 };
 
 module.exports = {
-  showAllProducts,
-  showSingleProduct,
-  showSingleProductBYID,
-  createProduct,
-  deleteProduct,
-  updateProduct,
-  showAllProductsByCategory
+  showAllProducts, showSingleProduct, showSingleProductBYID,
+  createProduct, deleteProduct, updateProduct, showAllProductsByCategory
 };

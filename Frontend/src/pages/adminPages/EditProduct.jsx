@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import Sidebar from '../../components/ui/Admin/Sidebar';
 import ProductForm from '../../components/ui/Admin/ProductForm';
 
 const EditProduct = () => {
@@ -7,21 +8,14 @@ const EditProduct = () => {
   const navigate = useNavigate();
   const [product, setProduct] = useState(null);
 
-  useEffect(() => {
-    fetchProduct();
-  }, []);
+  useEffect(() => { fetchProduct(); }, []);
 
   const fetchProduct = async () => {
     try {
-      const res = await fetch(`http://localhost:8000/product/single_Product/${id}`);
+      const res  = await fetch(`http://localhost:8000/product/single_Product/${id}`);
       const data = await res.json();
-      if (data.data) {
-        // sizes/colors/images are already real arrays from MongoDB now — no JSON.parse needed
-        setProduct(data.data);
-      }
-    } catch (err) {
-      console.error('Failed to load product:', err);
-    }
+      if (data.data) setProduct(data.data);
+    } catch (err) { console.error('Failed to load product:', err); }
   };
 
   const handleSubmit = async (formData) => {
@@ -29,32 +23,34 @@ const EditProduct = () => {
       const token = localStorage.getItem('adminToken');
       const res = await fetch(`http://localhost:8000/product/update_Product/${id}`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify(formData),
       });
-
       if (res.ok) {
         navigate('/admin/products');
       } else {
         const errData = await res.json();
         alert(errData.message || 'Failed to update product');
       }
-    } catch (err) {
-      console.error('Update error:', err);
-    }
+    } catch (err) { console.error('Update error:', err); }
   };
 
   return (
-    <div className="max-w-3xl mx-auto p-8 bg-[#f6f5f3] rounded-2xl shadow-xl mt-10">
-      <h2 className="text-3xl font-bold mb-8 text-center text-black">Edit Product</h2>
-      {product ? (
-        <ProductForm onSubmit={handleSubmit} initialData={product} />
-      ) : (
-        <p className="text-center">Loading product...</p>
-      )}
+    <div className="flex min-h-screen bg-[#f7f8fc]">
+      <Sidebar />
+      <main className="flex-1 p-8 min-w-0">
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold text-gray-900">Edit Product</h1>
+          <p className="text-gray-500 mt-1">Update product details and save changes.</p>
+        </div>
+        <div className="max-w-3xl bg-white rounded-2xl border border-gray-100 shadow-sm p-8">
+          {product ? (
+            <ProductForm onSubmit={handleSubmit} initialData={product} />
+          ) : (
+            <div className="flex items-center justify-center py-20 text-gray-400">Loading product…</div>
+          )}
+        </div>
+      </main>
     </div>
   );
 };

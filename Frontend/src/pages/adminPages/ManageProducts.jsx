@@ -1,16 +1,14 @@
 import React from 'react';
 import Sidebar from '../../components/ui/Admin/Sidebar';
-import AdminNavbar from '../../components/ui/Admin/AdminNavbar';
 import ProductTable from '../../components/ui/Admin/ProductTable';
-import '../../styles/admin.css';
 
 const ManageProducts = () => {
   return (
-    <div className="admin-container">
+    <div className="flex min-h-screen bg-[#f7f8fc]">
       <Sidebar />
-      <div className="admin-content">
+      <main className="flex-1 p-8 min-w-0">
         <ProductTable />
-      </div>
+      </main>
     </div>
   );
 };
