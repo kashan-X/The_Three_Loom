@@ -2,7 +2,7 @@
 
 A full-stack e-commerce platform for a clothing brand, offering curated collections for men, women, and children. Built with a React frontend and a Node.js/Express/MongoDB backend.
 
-**Live Demo:** [Watch the walkthrough](https://drive.google.com/file/d/1SFAFDhuvdIdXt367GZfqh415Rb-d2_4q/view?usp=sharing)
+**Live Demo:** [Watch the walkthrough](https://drive.google.com/drive/folders/1HFYg1FnaM3t7d3IDZ58rvMlv70jCed7O?usp=drive_link)
 **Repository:** [github.com/kashan-X/The_Three_Loom](https://github.com/kashan-X/The_Three_Loom.git)
 
 ---
